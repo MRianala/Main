@@ -1,33 +1,34 @@
-package controller;
-
+package controllers;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.util.Enumeration;
+import java.util.HashMap;
+import annot.Controller;
+import annot.Get;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import annotation.AnnotationController;
-import java.util.List;
-
-import annotation.AnnotationController;
-
-import java.util.ArrayList;
-import jakarta.servlet.ServletContext;
-import java.io.File;
-import java.net.URL;
-import java.util.Enumeration;
+import utilities.Mapping;
 
 public class FrontController extends HttpServlet {
-    List<String> controllerList;
-    boolean initialized = false;
 
+    private HashMap<String, Mapping> urlMappings = new HashMap<>();
+
+    @Override
+    public void init() throws ServletException {
+        scan();
+    }
+    
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
 
-        if (!initialized) {
-            initializeControllers();
-        }
+        String requestUrl = request.getRequestURI().substring(request.getContextPath().length());
 
         try (PrintWriter out = response.getWriter()) {
             out.println("<!DOCTYPE html>");
@@ -36,23 +37,26 @@ public class FrontController extends HttpServlet {
             out.println("<title>FrontController</title>");
             out.println("</head>");
             out.println("<body>");
-            out.println("<h1>Servlet FrontController</h1>");
-            out.println("<p>URL: " + request.getRequestURL() + "</p>");
-            if (controllerList.size() != 0) {
-                for (String controller : controllerList) {
-                    out.println("<p> Controller: " + controller + "</p>");
-                }
+
+            Mapping mapping = urlMappings.get(requestUrl);
+
+            if (mapping != null) {
+                out.println("<p>URL: " + requestUrl + "</p>");
+                out.println("<p>Class: " + mapping.getClassName() + "</p>");
+                out.println("<p>Method: " + mapping.getMethodName() + "</p>");
+            } else {
+                out.println("<p>Aucune méthode associée à ce chemin URL : " + requestUrl + "</p>");
             }
+
             out.println("</body>");
             out.println("</html>");
         }
     }
 
-    private void initializeControllers() {
-        controllerList = new ArrayList<>();
+    private void scan() {
         try {
             ServletContext context = getServletContext();
-            String packageName = context.getInitParameter("Controller");
+            String packageName = context.getInitParameter("controller_package");
 
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
             Enumeration<URL> resources = classLoader.getResources(packageName.replace('.', '/'));
@@ -64,8 +68,6 @@ public class FrontController extends HttpServlet {
                     scanControllers(file, packageName);
                 }
             }
-
-            initialized = true;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -75,12 +77,10 @@ public class FrontController extends HttpServlet {
         if (!directory.exists()) {
             return;
         }
-
         File[] files = directory.listFiles();
         if (files == null) {
             return;
         }
-
         for (File file : files) {
             if (file.isDirectory()) {
                 scanControllers(file, packageName + "." + file.getName());
@@ -88,8 +88,15 @@ public class FrontController extends HttpServlet {
                 String className = packageName + '.' + file.getName().substring(0, file.getName().length() - 6);
                 try {
                     Class<?> clazz = Class.forName(className);
-                    if (clazz.isAnnotationPresent(AnnotationController.class)) {
-                        controllerList.add(className);
+                    if (clazz.isAnnotationPresent(Controller.class)) {
+                        Method[] methods = clazz.getDeclaredMethods();
+                        for (Method method : methods) {
+                            if (method.isAnnotationPresent(Get.class)) {
+                                Get get = method.getAnnotation(Get.class);
+                                String url = get.value();
+                                urlMappings.put(url, new Mapping(className, method.getName()));
+                            }
+                        }
                     }
                 } catch (ClassNotFoundException e) {
                     e.printStackTrace();
@@ -109,4 +116,5 @@ public class FrontController extends HttpServlet {
             throws ServletException, IOException {
         processRequest(request, response);
     }
+
 }
