@@ -41,9 +41,12 @@ public class FrontController extends HttpServlet {
             Mapping mapping = urlMappings.get(requestUrl);
 
             if (mapping != null) {
-                out.println("<p>URL: " + requestUrl + "</p>");
-                out.println("<p>Class: " + mapping.getClassName() + "</p>");
-                out.println("<p>Method: " + mapping.getMethodName() + "</p>");
+                try {
+                    Class<?> clazz = Class.forName(mapping.getClassName());
+                    Object instance = clazz.getDeclaredConstructor().newInstance();
+                    Method method = instance.getClass().getMethod(mapping.getMethodName());
+                    out.println("<p>=> " + method.invoke(instance) + "</p>");
+                } catch (Exception e) {e.printStackTrace();}
             } else {
                 out.println("<p>Aucune méthode associée à ce chemin URL : " + requestUrl + "</p>");
             }
