@@ -45,7 +45,18 @@ public class FrontController extends HttpServlet {
                     Class<?> clazz = Class.forName(mapping.getClassName());
                     Object instance = clazz.getDeclaredConstructor().newInstance();
                     Method method = instance.getClass().getMethod(mapping.getMethodName());
-                    out.println("<p>=> " + method.invoke(instance) + "</p>");
+                    // Raha String ny retour
+                    if (method.getReturnType() == String.class) {
+                        out.println("<p>=> " + method.invoke(instance) + "</p>");
+                    }
+                    // Raha Model and View
+                    else if(method.getReturnType() == ModelAndView.class) {
+                        ModelAndView modelAndView = (ModelAndView) method.invoke(instance);
+                        for (Map.Entry<String, Object> entry : modelAndView.getData().entrySet()) {
+                            request.setAttribute(entry.getKey(), entry.getValue());
+                        }
+                        request.getRequestDispatcher(modelAndView.getUrl()).forward(request, response);
+                    }
                 } catch (Exception e) {e.printStackTrace();}
             } else {
                 out.println("<p>Aucune méthode associée à ce chemin URL : " + requestUrl + "</p>");
