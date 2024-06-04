@@ -22,4 +22,4 @@ REM Supprimer le dossier contenant les .classes (décommenter si nécessaire)
 rmdir /s /q %CLASSES_DIR%
 
 REM couper les fichiers .jar vers test
-xcopy /s /q /y "framework.jar" "C:\Users\NJAKATIANA\Desktop\Naina\framework\sprint2-test\lib"
+xcopy /s /q /y "framework.jar" "C:\Users\NJAKATIANA\Desktop\Naina\framework\sprint4-test\lib"
