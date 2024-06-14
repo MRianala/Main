@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import utilities.Mapping;
+import utilities.ModelAndView;
 
 public class FrontController extends HttpServlet {
 
@@ -56,6 +57,8 @@ public class FrontController extends HttpServlet {
                             request.setAttribute(entry.getKey(), entry.getValue());
                         }
                         request.getRequestDispatcher(modelAndView.getUrl()).forward(request, response);
+                    }else{
+                        throw new Exception("Type de retour incorrect");
                     }
                 } catch (Exception e) {e.printStackTrace();}
             } else {
@@ -71,6 +74,10 @@ public class FrontController extends HttpServlet {
         try {
             ServletContext context = getServletContext();
             String packageName = context.getInitParameter("controller_package");
+
+            if (packageName == null || packageName.isEmpty()) {
+                throw new Exception("Package abscent ou vide");
+            }
 
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
             Enumeration<URL> resources = classLoader.getResources(packageName.replace('.', '/'));
@@ -108,7 +115,11 @@ public class FrontController extends HttpServlet {
                             if (method.isAnnotationPresent(Get.class)) {
                                 Get get = method.getAnnotation(Get.class);
                                 String url = get.value();
-                                urlMappings.put(url, new Mapping(className, method.getName()));
+                                if (urlMappings.containsKey(className)) {
+                                    throw new Exception("url deja associer à une methode");
+                                }else{
+                                    urlMappings.put(url, new Mapping(className, method.getName()));
+                                }
                             }
                         }
                     }
