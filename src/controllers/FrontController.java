@@ -3,9 +3,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Map;
+
 import annot.Controller;
 import annot.Get;
 import jakarta.servlet.ServletContext;
@@ -48,11 +51,11 @@ public class FrontController extends HttpServlet {
                     Method method = instance.getClass().getMethod(mapping.getMethodName());
                     // Raha String ny retour
                     if (method.getReturnType() == String.class) {
-                        out.println("<p>=> " + method.invoke(instance) + "</p>");
+                        out.println("<p>=> " + method.invoke(instance,getParams(method, request)) + "</p>");
                     }
                     // Raha Model and View
                     else if(method.getReturnType() == ModelAndView.class) {
-                        ModelAndView modelAndView = (ModelAndView) method.invoke(instance);
+                        ModelAndView modelAndView = (ModelAndView) method.invoke(instance,getParams(method, request));
                         for (Map.Entry<String, Object> entry : modelAndView.getData().entrySet()) {
                             request.setAttribute(entry.getKey(), entry.getValue());
                         }
@@ -128,6 +131,21 @@ public class FrontController extends HttpServlet {
                 }
             }
         }
+    }
+
+    private Object[] getParams(Method method , HttpServletRequest request) {
+        Parameter[] params = method.getParameters();
+        Object[] paramsValue = new Object[params.length];
+
+        for (int i = 0; i < paramsValue.length; i++) {
+            RequestParam requestParam = params[i].getAnnotation(RequestParam.class);
+            if (requestParam != null) {
+                String paramName = requestParam.value();
+                String paramValue = request.getParameter(paramName);
+                paramsValue[i] = paramValue ;
+            }
+        }
+        return paramsValue;
     }
 
     @Override
